@@ -4,29 +4,50 @@ import torch.nn.functional as F
 from torch.nn.modules.pooling import MaxPool2d
 
 
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Linear') != -1:
+        torch.nn.init.normal_(m.weight, 0.0, 0.02)
+        torch.nn.init.zeros_(m.bias)
+    if classname.find('Conv') != -1:
+        torch.nn.init.normal_(m.weight, 0.0, 0.02)
+    elif classname.find('BatchNorm') != -1:
+        torch.nn.init.normal_(m.weight, 1.0, 0.02)
+        torch.nn.init.zeros_(m.bias)
+
+
 class BidirectionalLSTM(nn.Module):
-    def __init__(self, nIn, nHidden, nOut):
+    def __init__(self, input_dim, hidden_dim, output_dim):
         super(BidirectionalLSTM, self).__init__()
 
-        self.rnn = nn.LSTM(nIn, nHidden, bidirectional=True)
-        self.embedding = nn.Linear(nHidden * 2, nOut)
+        self.rnn = nn.LSTM(input_dim, hidden_dim, bidirectional=True)
+        self.embedding = nn.Linear(hidden_dim * 2, output_dim)
 
     def forward(self, input):
         recurrent, _ = self.rnn(input)
         T, b, h = recurrent.size()
         t_rec = recurrent.view(T * b, h)
 
-        output = self.embedding(t_rec)  # [T * b, nOut]
+        output = self.embedding(t_rec)  # [T * b, output_dim]
         output = output.view(T, b, -1)
 
         return output
 
 
 class CRNN(nn.Module):
-    def __init__(self, imgH, nc, nclass, nh, n_rnn=2, leakyRelu=False):
+    def __init__(self,
+                 num_channels,
+                 num_class,
+                 num_units,
+                 n_rnn=2,
+                 leakyRelu=False):
         super(CRNN, self).__init__()
         cnn = nn.Sequential(
-            nn.Conv2d(nc, 64, kernel_size=(3, 3), stride=1, padding=1),
+            nn.Conv2d(num_channels,
+                      64,
+                      kernel_size=(3, 3),
+                      stride=1,
+                      padding=1),
             nn.LeakyReLU(inplace=True),
             nn.MaxPool2d((2, 2), stride=(2, 2)),
             nn.Conv2d(64, 128, kernel_size=(3, 3), stride=1, padding=1),
@@ -50,8 +71,9 @@ class CRNN(nn.Module):
         )
 
         self.cnn = cnn
-        self.rnn = nn.Sequential(BidirectionalLSTM(512, nh, nh),
-                                 BidirectionalLSTM(nh, nh, nclass))
+        self.rnn = nn.Sequential(
+            BidirectionalLSTM(512, num_units, num_units),
+            BidirectionalLSTM(num_units, num_units, num_class))
 
         def forward(x):
             # conv features

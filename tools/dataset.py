@@ -8,7 +8,12 @@ from PIL import Image
 
 
 class lmdbDataset(torch.utils.data.Dataset):
-    def __init__(self, root=None, transform=None, target_transform=None):
+    def __init__(self,
+                 root=None,
+                 transform=None,
+                 target_transform=None,
+                 imgH=32,
+                 imgW=100):
         self.env = lmdb.open(root,
                              max_readers=1,
                              readonly=True,
@@ -26,6 +31,8 @@ class lmdbDataset(torch.utils.data.Dataset):
 
         self.transform = transform
         self.target_transform = target_transform
+        self.imgH = imgH
+        self.imgW = imgW
 
     def __len__(self):
         return self.nSamples
@@ -42,7 +49,8 @@ class lmdbDataset(torch.utils.data.Dataset):
             buf.seek(0)
             try:
                 img = torchvision.transforms.functional.to_tensor(
-                    Image.open(buf).convert('L').resize((40, 100)))
+                    Image.open(buf).convert('L').resize(
+                        (self.imgW, self.imgH)))
             except IOError:
                 print('Corrupted image for %d' % index)
                 return self[index + 1]
@@ -142,6 +150,6 @@ class lmdbDataset(torch.utils.data.Dataset):
 #         #     return 224589
 
 mya = lmdbDataset(root="/root/project/data/lmdb_train1")
-thloard = torch.utils.data.DataLoader(dataset=mya, batch_size=3, shuffle=False)
+thloard = torch.utils.data.DataLoader(dataset=mya, batch_size=3, shuffle=True)
 for img, target in thloard:
     print(target)

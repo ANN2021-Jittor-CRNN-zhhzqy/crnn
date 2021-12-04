@@ -1,6 +1,6 @@
 import os
 import lmdb  # install lmdb by "pip install lmdb"
-import cv2
+# import cv2
 import numpy as np
 
 
@@ -75,7 +75,7 @@ def main(outputPath, checkValid=False):
 
     root_path = "/root/synth/mnt/ramdisk/max/90kDICT32px/"
 
-    file = open("/root/synth/mnt/ramdisk/max/90kDICT32px/annotation_train.txt",
+    file = open("/root/synth/mnt/ramdisk/max/90kDICT32px/annotation_val.txt",
                 'r')
     line = file.readline()
     env = lmdb.open(outputPath, map_size=1099511627776)
@@ -103,7 +103,7 @@ def main(outputPath, checkValid=False):
         if cnt % 1000 == 0:
             writeCache(env, cache)
             cache = {}
-            print('Written %d / %d' % (cnt, 7224612))
+            print('Written %d' % (cnt))
         cnt += 1
         line = file.readline()
 
@@ -114,4 +114,4 @@ def main(outputPath, checkValid=False):
 
 
 if __name__ == '__main__':
-    main("/root/project/data/lmdb_train")
+    main("/root/project/data/lmdb_val")
