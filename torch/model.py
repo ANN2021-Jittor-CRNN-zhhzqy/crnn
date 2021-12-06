@@ -36,12 +36,14 @@ class BidirectionalLSTM(nn.Module):
 
 class CRNN(nn.Module):
     def __init__(self,
+                 device,
                  num_channels,
                  num_class,
                  num_units,
                  n_rnn=2,
                  leakyRelu=False):
         super(CRNN, self).__init__()
+        self.device = device
         cnn = nn.Sequential(
             nn.Conv2d(num_channels,
                       64,
@@ -75,13 +77,14 @@ class CRNN(nn.Module):
             BidirectionalLSTM(512, num_units, num_units),
             BidirectionalLSTM(num_units, num_units, num_class))
 
-        def forward(x):
-            # conv features
-            conv = self.cnn(input)
-            conv = conv.squeeze(2)
-            conv = conv.permute(2, 0, 1)  # [w, b, c]
+    def forward(self, x):
+        # conv features
+        x = self.cnn(x.to(self.device))
+        x = x.squeeze(2)
+        x = x.permute(2, 0, 1)  # [w, b, c]
 
-            # rnn features
-            output = self.rnn(conv)
+        # rnn features
+        x = self.rnn(x)
+        x=F.log_softmax(x,dim=2)
 
-            return output
+        return x

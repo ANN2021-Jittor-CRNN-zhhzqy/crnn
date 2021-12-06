@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Variable
 import collections
+import numpy as np
 
 
 class strLabelConverter(object):
@@ -31,9 +32,6 @@ class strLabelConverter(object):
         Args:
             text (str or list of str): texts to convert.
 
-        Returns:
-            torch.IntTensor [length_0 + length_1 + ... length_{n - 1}]: encoded texts.
-            torch.IntTensor [n]: length of each text.
         """
         if isinstance(text, str):
             text = [
@@ -41,17 +39,25 @@ class strLabelConverter(object):
                 for char in text
             ]
             length = [len(text)]
+
+            return torch.Tensor(text), torch.Tensor(length)
         elif isinstance(text, collections.Iterable):
-            length = [len(s) for s in text]
-            text = ''.join(text)
-            text, _ = self.encode(text)
-        return (torch.IntTensor(text), torch.IntTensor(length))
+            temp = []
+            length = []
+            for s in text:
+                st, le = self.encode(s)
+                temp.append(st)
+                length.append(float(le.item()))
+
+            return nn.utils.rnn.pad_sequence([
+                torch.Tensor(iter) for iter in temp
+            ]).transpose(0, 1), torch.tensor(length)
 
     def decode(self, t, length, raw=False):
         """Decode encoded texts back into strs.
 
         Args:
-            torch.IntTensor [length_0 + length_1 + ... length_{n - 1}]: encoded texts.
+            torch.IntTensor [length_0 , length_1 , ... length_{n - 1}]: encoded texts.
             torch.IntTensor [n]: length of each text.
 
         Raises:
@@ -60,11 +66,11 @@ class strLabelConverter(object):
         Returns:
             text (str or list of str): texts to convert.
         """
+        t.cpu()
+        length.cpu()
         if length.numel() == 1:
-            length = length[0]
-            assert t.numel(
-            ) == length, "text with length: {} does not match declared length: {}".format(
-                t.numel(), length)
+            length = length.item()
+
             if raw:
                 return ''.join([self.alphabet[i - 1] for i in t])
             else:
@@ -75,16 +81,8 @@ class strLabelConverter(object):
                 return ''.join(char_list)
         else:
             # batch mode
-            assert t.numel() == length.sum(
-            ), "texts with length: {} does not match declared length: {}".format(
-                t.numel(), length.sum())
             texts = []
-            index = 0
             for i in range(length.numel()):
-                l = length[i]
                 texts.append(
-                    self.decode(t[index:index + l],
-                                torch.IntTensor([l]),
-                                raw=raw))
-                index += l
+                    self.decode(t[i, :], length[i].clone().detach(), raw=raw))
             return texts

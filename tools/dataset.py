@@ -65,7 +65,7 @@ class lmdbDataset(torch.utils.data.Dataset):
             if self.target_transform is not None:
                 label = self.target_transform(label)
 
-        return (img, label)
+        return img, label
 
 
 # class synthdataset(torch.utils.data.Dataset):
@@ -149,7 +149,7 @@ class lmdbDataset(torch.utils.data.Dataset):
 #         # else:
 #         #     return 224589
 
-mya = lmdbDataset(root="/root/project/data/lmdb_train1")
-thloard = torch.utils.data.DataLoader(dataset=mya, batch_size=3, shuffle=True)
-for img, target in thloard:
-    print(target)
+# mya = lmdbDataset(root="/root/project/data/lmdb_train1")
+# thloard = torch.utils.data.DataLoader(dataset=mya, batch_size=3, shuffle=True)
+# for img, target in thloard:
+#     print(target)
