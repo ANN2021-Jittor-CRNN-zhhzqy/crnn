@@ -3,16 +3,27 @@ import lmdb  # install lmdb by "pip install lmdb"
 # import cv2
 import numpy as np
 
+from PIL import Image
 
-def checkImageIsValid(imageBin):
-    if imageBin is None:
-        return False
-    imageBuf = np.frombuffer(imageBin, dtype=np.uint8)
-    img = cv2.imdecode(imageBuf, cv2.IMREAD_GRAYSCALE)
-    imgH, imgW = img.shape[0], img.shape[1]
-    if imgH * imgW == 0:
-        return False
-    return True
+
+def checkImageIsValid(file):
+    valid = True
+    try:
+        Image.open(file).load()
+    except OSError:
+        valid = False
+    return valid
+
+
+# def checkImageIsValid(imageBin):
+#     if imageBin is None:
+#         return False
+#     imageBuf = np.frombuffer(imageBin, dtype=np.uint8)
+#     img = cv2.imdecode(imageBuf, cv2.IMREAD_GRAYSCALE)
+#     imgH, imgW = img.shape[0], img.shape[1]
+#     if imgH * imgW == 0:
+#         return False
+#     return True
 
 
 def writeCache(env, cache):
@@ -71,7 +82,7 @@ def writeCache(env, cache):
 #     print('Created dataset with %d samples' % nSamples)
 
 
-def main(outputPath, checkValid=False):
+def main(outputPath, checkValid=True):
 
     root_path = "/root/synth/mnt/ramdisk/max/90kDICT32px/"
 
@@ -89,12 +100,13 @@ def main(outputPath, checkValid=False):
         if not os.path.exists(path):
             print('%s does not exist' % path)
             continue
+        if checkValid:
+            if not checkImageIsValid(path):
+                print('%s is not a valid image' % path)
+                line = file.readline()
+                continue
         with open(path, 'rb') as f:
             imageBin = f.read()
-        if checkValid:
-            if not checkImageIsValid(imageBin):
-                print('%s is not a valid image' % path)
-                continue
 
         imageKey = "image_{:09d}".format(cnt)
         labelKey = "label_{:09d}".format(cnt)
@@ -105,7 +117,10 @@ def main(outputPath, checkValid=False):
             cache = {}
             print('Written %d' % (cnt))
         cnt += 1
-        line = file.readline()
+
+        # if (cnt == 10000):
+        #     break
+        # line = file.readline()
 
     nSamples = cnt - 1
     cache['num-samples'] = str(nSamples).encode()
@@ -114,4 +129,4 @@ def main(outputPath, checkValid=False):
 
 
 if __name__ == '__main__':
-    main("/root/project/data/lmdb_val")
+    main("/root/project/data/lmdb_val1")

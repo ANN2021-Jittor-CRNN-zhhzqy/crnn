@@ -22,18 +22,18 @@ from tools.utlis import strLabelConverter
 parser = argparse.ArgumentParser()
 parser.add_argument('--num_epochs',
                     type=int,
-                    default=20,
-                    help='Number of training epoch. Default: 20')
+                    default=10,
+                    help='Number of training epoch. Default: 10')
 parser.add_argument('--batch_size',
                     type=int,
-                    default=3,
+                    default=256,
                     help='The number of batch_size.')
 parser.add_argument('--learning_rate',
                     type=float,
                     default=1e-3,
                     help='Learning rate during optimization. Default: 1e-3')
 parser.add_argument('--data_dir',
-                    default='../data/lmdb_train1',
+                    default='../data/lmdb_train',
                     type=str,
                     help='The path of the data directory')
 parser.add_argument('--val_dir',
@@ -61,9 +61,9 @@ parser.add_argument('--alphabet',
                     type=str,
                     default='0123456789abcdefghijklmnopqrstuvwxyz')
 
-parser.add_argument('--val_steps', type=int, default=5)
-parser.add_argument('--logging_steps', type=int, default=1)
-parser.add_argument('--saving_steps', type=int, default=5)
+parser.add_argument('--val_steps', type=int, default=200)
+parser.add_argument('--logging_steps', type=int, default=50)
+parser.add_argument('--saving_steps', type=int, default=200)
 
 parser.add_argument('--ckpt_dir',
                     default='./results',
@@ -179,19 +179,22 @@ if __name__ == '__main__':
 
                 loss = criterion(preds, target, preds_length, target_length)
                 loss.backward()
+                optimizer.step()
                 losses.append(loss.tolist())
                 loss.item()
-                optimizer.step()
                 step_time = (time.perf_counter() - start_time) / 1e3
                 log_time += step_time
 
                 i += 1
                 if (i + 1) % args.logging_steps == 0:
+                    print("cycle{} epoch{}: loss{}".format(
+                        i, epoch, np.mean(losses)))
+
                     tb_writer.add_scalar("train loss",
                                          np.mean(losses),
                                          global_step=i)
                     tb_writer.add_scalar("time", log_time, global_step=i)
-                    print(np.mean(losses))
+
                     losses = []
                     log_time = 0
 
@@ -215,4 +218,6 @@ if __name__ == '__main__':
                                         "crnn{}_{}".format(epoch, i))
                     torch.save(model.state_dict(), path)
             epoch_time = time.time() - epoch_start_time
-            tb_writer.add_scalar("epoch time", epoch_start_time, global_step=epoch)
+            tb_writer.add_scalar("epoch time",
+                                 epoch_start_time,
+                                 global_step=epoch)
