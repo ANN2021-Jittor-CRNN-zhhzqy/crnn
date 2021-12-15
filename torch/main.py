@@ -16,7 +16,7 @@ from tensorboardX import SummaryWriter
 from model import CRNN, weights_init
 
 sys.path.append('../')
-from tools.dataset import lmdbDataset
+from dataset import lmdbDataset
 from tools.utlis import strLabelConverter
 
 parser = argparse.ArgumentParser()
@@ -26,7 +26,7 @@ parser.add_argument('--num_epochs',
                     help='Number of training epoch. Default: 10')
 parser.add_argument('--batch_size',
                     type=int,
-                    default=256,
+                    default=128,
                     help='The number of batch_size.')
 parser.add_argument('--learning_rate',
                     type=float,
@@ -115,6 +115,11 @@ def fast_eval(model,
         for pred, label in zip(str_pred, labels):
             if pred == label.lower():
                 count += 1
+
+    # print("label '%s'" % labels[0])
+    # print("target ", target[0])
+    # print("encoded text pred ", preds[0])
+    # print("text pred '%s'" % str_pred[0])
     return np.mean(losses), count / (max_iter * batch_size), str_pred, labels
 
 
@@ -165,8 +170,11 @@ if __name__ == '__main__':
             for img, label in dataloader:
                 model.train()
                 start_time = time.perf_counter()
+                # print("label[0] ", label[0])
+
                 model.zero_grad()
                 target, target_length = converter.encode(label)
+                # print("target[0] ", target[0].data)
 
                 img.to(device)
                 target.to(device)
@@ -199,7 +207,6 @@ if __name__ == '__main__':
                     log_time = 0
 
                 if (i + 1) % args.val_steps == 0:
-                    model.eval()
                     val_loss, accuracy, result, groundtrue = fast_eval(
                         model=model,
                         criterion=criterion,
@@ -207,7 +214,8 @@ if __name__ == '__main__':
                         converter=converter,
                         device=device,
                         batch_size=args.batch_size)
-
+                    print("cycle{} epoch{}: val_loss{} accu{}".format(
+                        i, epoch, np.mean(val_loss), accuracy))
                     tb_writer.add_scalar("val loss", val_loss, global_step=i)
                     tb_writer.add_scalar("accuracy", accuracy, global_step=i)
                     tb_writer.add_text("target", groundtrue[0], global_step=i)
@@ -217,7 +225,26 @@ if __name__ == '__main__':
                     path = os.path.join(args.ckpt_dir,
                                         "crnn{}_{}".format(epoch, i))
                     torch.save(model.state_dict(), path)
+                    
             epoch_time = time.time() - epoch_start_time
             tb_writer.add_scalar("epoch time",
                                  epoch_start_time,
                                  global_step=epoch)
+
+            print("cycle{} epoch{}: loss{}".format(i, epoch, np.mean(losses)))
+            tb_writer.add_scalar("train loss", np.mean(losses), global_step=i)
+            tb_writer.add_scalar("time", log_time, global_step=i)
+
+            val_loss, accuracy, result, groundtrue = fast_eval(
+                model=model,
+                criterion=criterion,
+                dataloader=dataloader_val,
+                converter=converter,
+                device=device,
+                batch_size=args.batch_size)
+            print("cycle{} epoch{}: val_loss{} accu{}".format(
+                i, epoch, np.mean(val_loss), accuracy))
+            tb_writer.add_scalar("val loss", val_loss, global_step=i)
+            tb_writer.add_scalar("accuracy", accuracy, global_step=i)
+            tb_writer.add_text("target", groundtrue[0], global_step=i)
+            tb_writer.add_text("preds", result[0], global_step=i)

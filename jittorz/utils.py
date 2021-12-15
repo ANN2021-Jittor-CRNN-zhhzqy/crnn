@@ -16,12 +16,12 @@ class strLabelConverter(object):
         self._ignore_case = ignore_case
         if self._ignore_case:
             alphabet = alphabet.lower()
-        self.alphabet = alphabet
+        self.alphabet = alphabet + '-'  # for `-1` index
 
         self.dict = {}
         for i, char in enumerate(alphabet):
             # NOTE: 0 is reserved for 'blank' required by wrap_ctc
-            self.dict[char] = i + 1  # !!
+            self.dict[char] = i + 1
 
     def encode(self, texts):
         """
@@ -36,18 +36,9 @@ class strLabelConverter(object):
         max_len = max(length)
         for s in texts:
             st = [self.dict[char.lower() if self._ignore_case else char] for char in s]
-            st = jt.nn.pad(jt.array(st), (0, max_len - len(st)), "constant", 0)
+            st = jt.nn.pad(jt.array(st).clone(), (0, max_len - len(st)))
             sts.append(st)
         return jt.stack(sts), jt.array(length)
-        """
-        length = [len(s) for s in texts]
-        s = ''.join(texts)
-        sts = [self.dict[char.lower() if self._ignore_case else char] for char in s]
-        print("sts ", sts)
-        print("length ", length)
-        return jt.array(sts), jt.array(length)
-        """
-
 
     def decode(self, encoded_texts):
         """
@@ -61,11 +52,11 @@ class strLabelConverter(object):
         """
         texts = []
         for st in encoded_texts:
-            last_char_i = 0  # !!
+            last_char_i = 0
             char_list = []
             for char_i in st.tolist():
-                if char_i != 0 and char_i != last_char_i:  # !!
-                    char_list.append(self.alphabet[char_i - 1])  # !!
+                if char_i != 0 and char_i != last_char_i:
+                    char_list.append(self.alphabet[char_i - 1])
                 last_char_i = char_i
             texts.append(''.join(char_list))
         return texts

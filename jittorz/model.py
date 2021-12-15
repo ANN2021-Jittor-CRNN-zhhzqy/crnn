@@ -21,7 +21,7 @@ class BidirectionalLSTM(nn.Module):
         self.rnn = nn.LSTM(input_dim, hidden_dim, bidirectional=True)
         self.embedding = nn.Linear(hidden_dim * 2, output_dim)
 
-    def forward(self, input):
+    def execute(self, input):
         recurrent, _ = self.rnn(input)
         T, b, h = recurrent.size()
         t_rec = recurrent.view(T * b, h)
@@ -46,26 +46,26 @@ class CRNN(nn.Module):
                       kernel_size=(3, 3),
                       stride=1,
                       padding=1),
-            nn.LeakyReLU(inplace=True),
+            nn.LeakyReLU(),
             nn.MaxPool2d((2, 2), stride=(2, 2)),
             nn.Conv2d(64, 128, kernel_size=(3, 3), stride=1, padding=1),
-            nn.LeakyReLU(inplace=True),
+            nn.LeakyReLU(),
             nn.MaxPool2d((2, 2), stride=(2, 2)),
             nn.Conv2d(128, 256, kernel_size=(3, 3), stride=1, padding=1),
             nn.BatchNorm2d(256),
-            nn.LeakyReLU(inplace=True),
+            nn.LeakyReLU(),
             nn.Conv2d(256, 256, kernel_size=(3, 3), stride=1, padding=1),
-            nn.LeakyReLU(inplace=True),
+            nn.LeakyReLU(),
             nn.MaxPool2d((2, 2), stride=(2, 1), padding=(0, 1)),
             nn.Conv2d(256, 512, kernel_size=(3, 3), stride=1, padding=1),
             nn.BatchNorm2d(512),
-            nn.LeakyReLU(inplace=True),
+            nn.LeakyReLU(),
             nn.Conv2d(512, 512, kernel_size=(3, 3), stride=1, padding=1),
-            nn.LeakyReLU(inplace=True),
+            nn.LeakyReLU(),
             nn.MaxPool2d((2, 2), stride=(2, 1), padding=(0, 1)),
             nn.Conv2d(512, 512, kernel_size=(2, 2), stride=1, padding=0),
             nn.BatchNorm2d(512),
-            nn.LeakyReLU(inplace=True),
+            nn.LeakyReLU(),
         )
 
         self.cnn = cnn
@@ -73,7 +73,7 @@ class CRNN(nn.Module):
             BidirectionalLSTM(512, num_units, num_units),
             BidirectionalLSTM(num_units, num_units, num_class))
 
-    def forward(self, x):
+    def execute(self, x):
         # conv features
         x = self.cnn(x)
         x = x.squeeze(2)

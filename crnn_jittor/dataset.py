@@ -57,10 +57,11 @@ class lmdbDataset(jittor.dataset.Dataset):
             if self.transform is not None:
                 img = self.transform(img)
 
-            label_key = "label_{:09d}".format(index + 1).encode(encoding="utf-8")
+            label_key = "label_{:09d}".format(index +
+                                              1).encode(encoding="utf-8")
             label = txn.get(label_key).decode()
 
             if self.target_transform is not None:
                 label = self.target_transform(label)
-        
+
         return img, label  # [1, 32, 100], str
