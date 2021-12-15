@@ -27,12 +27,12 @@ class lmdbDataset(jittor.dataset.Dataset):
 
         with self.env.begin(write=False) as txn:
             nSamples = int(txn.get("num-samples".encode()))
-            self.nSamples = nSamples
+            self.nSamples = nSamples  # 7,224,586
 
         self.transform = transform
         self.target_transform = target_transform
-        self.imgH = imgH
-        self.imgW = imgW
+        self.imgH = imgH  # 32
+        self.imgW = imgW  # 100
 
     def __len__(self):
         return self.nSamples
@@ -64,4 +64,5 @@ class lmdbDataset(jittor.dataset.Dataset):
             if self.target_transform is not None:
                 label = self.target_transform(label)
 
-        return img, label
+        return img, label  # [1, 32, 100], str
+

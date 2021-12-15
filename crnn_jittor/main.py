@@ -4,10 +4,11 @@ import time
 
 import numpy as np
 import jittor as jt
+import jittor.nn as nn
 
 from tensorboardX import SummaryWriter
 
-from model import CRNN, weights_init, show_weights
+from model import CRNN, weights_init
 from adadelta import Adadelta
 from dataset import lmdbDataset
 from utils import strLabelConverter
@@ -106,7 +107,7 @@ def fast_eval(model,
 
 
 if __name__ == '__main__':
-    jt.flags.use_cuda = 0
+    jt.flags.use_cuda = jt.has_cuda
     print(args)
     if args.version is None:
         print("must enter a version. e.g. 'python main.py --version 01'")
@@ -128,15 +129,14 @@ if __name__ == '__main__':
     if not args.test:
         model = CRNN(num_channels=1,
                      num_class=len(args.alphabet) + 1,
-                     num_units=args.num_units,
-                     num_layers=2)
+                     num_units=args.num_units)
         model.apply(weights_init)
 
         optimizer = Adadelta(model.parameters(), lr=args.learning_rate)
-        # optimizer = jt.nn.SGD(model.parameters(), lr=args.learning_rate)
+        # optimizer = nn.SGD(model.parameters(), lr=args.learning_rate)
         criterion = jt.CTCLoss(blank=0)
 
-        converter = strLabelConverter(args.alphabet, ignore_case=True)
+        converter = strLabelConverter(args.alphabet)
         dataset_train = lmdbDataset(root=args.data_dir,
                                     imgH=args.imgH,
                                     imgW=args.imgW)
@@ -152,11 +152,12 @@ if __name__ == '__main__':
         i = 0
         for epoch in range(args.num_epochs):
             log_time = 0
-            epoch_start_time = time.time()
+
             print("Epoch %d Start..." % (epoch))
 
             losses = []
             ep_i = 0
+            epoch_start_time = time.time()
             for img, label in dataloader:  # var[256,1,32,100], [str](256)
                 """
                 * lmdb_train: 7,224,586 / 256 = 28221 + 1 steps
@@ -164,10 +165,10 @@ if __name__ == '__main__':
                 """
                 model.train()
                 optimizer.zero_grad()
-                start_time = time.perf_counter()
 
-                target, target_length = converter.encode(
-                    label)  # var[256,len], var[256]
+                start_time = time.perf_counter()
+                target, target_length = converter.encode(label)
+
                 preds = model(img)
                 preds_length = jt.full((preds.size(1), ),
                                        val=preds.size(0),
@@ -177,8 +178,8 @@ if __name__ == '__main__':
 
                 optimizer.backward(loss)
                 optimizer.step()
+
                 losses.append(loss.clone().item())
-                optimizer.zero_grad()
 
                 step_time = (time.perf_counter() - start_time) / 1e3
                 log_time += step_time
@@ -195,8 +196,11 @@ if __name__ == '__main__':
 
                 if (ep_i + 1) % args.val_steps == 0:
                     val_loss, accuracy, result, groundtrue = fast_eval(
-                        model, criterion, dataloader_val, converter,
-                        args.batch_size)
+                        model=model,
+                        criterion=criterion,
+                        dataloader=dataloader_val,
+                        converter=converter,
+                        batch_size=args.batch_size)
                     tb_writer.add_scalar("val loss", val_loss, global_step=i)
                     tb_writer.add_scalar("accuracy", accuracy, global_step=i)
                     tb_writer.add_text("target", groundtrue[0], global_step=i)
