@@ -56,6 +56,7 @@ class lmdbDataset(jittor.dataset.Dataset):
 
             if self.transform is not None:
                 img = self.transform(img)
+            # print("img.shape ", img.shape)
 
             label_key = "label_{:09d}".format(index +
                                               1).encode(encoding="utf-8")
@@ -63,5 +64,6 @@ class lmdbDataset(jittor.dataset.Dataset):
 
             if self.target_transform is not None:
                 label = self.target_transform(label)
+            # print("label ", label)
 
         return img, label  # [1, 32, 100], str

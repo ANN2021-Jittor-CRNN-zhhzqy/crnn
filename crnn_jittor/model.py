@@ -33,8 +33,7 @@ class BidirectionalLSTM(jt.Module):
     def execute(self, x):
         x, _ = self.rnn(x)
         T, b, h = x.shape
-        x = self.embedding(x.view(T * b, h)).view(T, b,
-                                                  -1)  # (24, 256, num_class)
+        x = self.embedding(x.view(T * b, h)).view(T, b, -1)  # (24, 256, num_class)
         return x
 
 
@@ -42,35 +41,34 @@ class CRNN(jt.Module):
     def __init__(self, num_channels, num_class, num_units=256, num_layers=2):
         super(CRNN, self).__init__()
         self.cnn = nn.Sequential(
-            nn.Conv2d(num_channels, 64, (3, 3), stride=1,
-                      padding=1),  # (256, 64, 32, 100)
+            nn.Conv2d(num_channels, 64, (3, 3), stride=1, padding=1),  # (256, 64, 32, 100)
             nn.LeakyReLU(),
             nn.MaxPool2d((2, 2)),  # (256, 64, 16, 50)
-            nn.Conv2d(64, 128, (3, 3), stride=1,
-                      padding=1),  # (256, 128, 16, 50)
+            
+            nn.Conv2d(64, 128, (3, 3), stride=1, padding=1),  # (256, 128, 16, 50)
             nn.LeakyReLU(),
             nn.MaxPool2d((2, 2)),  # (256, 128, 8, 25)
-            nn.Conv2d(128, 256, (3, 3), stride=1,
-                      padding=1),  # (256, 256, 8, 25)
+            
+            nn.Conv2d(128, 256, (3, 3), stride=1, padding=1),  # (256, 256, 8, 25)
             nn.BatchNorm2d(256),  # !!
             nn.LeakyReLU(),
-            nn.Conv2d(256, 256, (3, 3), stride=1,
-                      padding=1),  # (256, 256, 8, 25)
+            
+            nn.Conv2d(256, 256, (3, 3), stride=1, padding=1),  # (256, 256, 8, 25)
             nn.LeakyReLU(),
-            nn.MaxPool2d((2, 2), stride=(2, 1),
-                         padding=(0, 1)),  # (256, 256, 4, 25)
-            nn.Conv2d(256, 512, (3, 3), stride=1,
-                      padding=1),  # (256, 512, 4, 25)
+            # nn.MaxPool2d((2, 2), stride=(2, 1), padding=(0, 1)),  # (256, 256, 4, 25)
+            nn.MaxPool2d((2, 1)),
+
+            nn.Conv2d(256, 512, (3, 3), stride=1, padding=1),  # (256, 512, 4, 25)
             nn.BatchNorm2d(512),
             nn.LeakyReLU(),
-            nn.Conv2d(512, 512, (3, 3), stride=1,
-                      padding=1),  # (256, 512, 4, 25)
+            
+            nn.Conv2d(512, 512, (3, 3), stride=1, padding=1),  # (256, 512, 4, 25)
             # nn.BatchNorm2d(512),
             nn.LeakyReLU(),
-            nn.MaxPool2d((2, 2), stride=(2, 1),
-                         padding=(0, 1)),  # (256, 512, 2, 25) 
-            nn.Conv2d(512, 512, (2, 2), stride=1,
-                      padding=0),  # (256, 512, 1, 24)
+            # nn.MaxPool2d((2, 2), stride=(2, 1), padding=(0, 1)),  # (256, 512, 2, 25) 
+            nn.MaxPool2d((2, 1)),
+
+            nn.Conv2d(512, 512, (2, 2), stride=1, padding=0),  # (256, 512, 1, 24)
             nn.BatchNorm2d(512),
             nn.LeakyReLU(),
         )
@@ -83,8 +81,7 @@ class CRNN(jt.Module):
 
     def execute(self, x):  # (256, 1, 32, 100)
         x = self.cnn(x)  # (256, 512, 1, 24)
-        x = x.squeeze(2).permute((2, 0, 1))
-        # (24, 256, 512) --- seq(width), batch, feature(channel)
+        x = x.squeeze(2).permute((2, 0, 1))  # (24, 256, 512) --- seq(width), batch, feature(channel)
         # x, _ = self.rnn(x)  # (24, 256, 1024) ---- h_0, c_0 default to zero if not provided; output dim double because rnn is bidirectional
         # T, b, h = x.shape
         # x = self.linear(x.view(T * b, h)).view(T, b, -1)  # (24, 256, num_class)

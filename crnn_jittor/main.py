@@ -37,11 +37,10 @@ parser.add_argument('--val_dir',
                     default='../data/lmdb_val',
                     type=str,
                     help='The path of the data directory')
-parser.add_argument(
-    '--test',
-    type=str,
-    default=None,
-    help='Evaluate the model with the specified name. Default: None')
+parser.add_argument('--test',
+                    type=str,
+                    default=None,
+                    help='Evaluate specified model. Default: None')
 parser.add_argument('--imgH',
                     type=int,
                     default=32,
@@ -58,7 +57,7 @@ parser.add_argument('--alphabet',
                     type=str,
                     default='0123456789abcdefghijklmnopqrstuvwxyz')
 parser.add_argument('--val_steps', type=int, default=2000)
-parser.add_argument('--logging_steps', type=int, default=1000)
+parser.add_argument('--logging_steps', type=int, default=400)
 parser.add_argument('--saving_steps', type=int, default=2000)
 parser.add_argument('--ckpt_dir',
                     type=str,
@@ -93,8 +92,9 @@ def fast_eval(model,
         preds_length = jt.full((preds.size(1), ),
                                val=preds.size(0),
                                dtype=jt.int)
-        loss = criterion(preds, target, preds_length, target_length)
-        losses.append(loss.clone().item())
+        loss = criterion(preds, target, preds_length, target_length.clone())
+
+        losses.append(loss.item())
 
         preds = preds.permute((1, 0, 2))  # (256, 24, 38)
         encoded_texts = preds.argmax(dim=-1)[0]  # (256, 24)
@@ -108,6 +108,7 @@ def fast_eval(model,
 
 if __name__ == '__main__':
     jt.flags.use_cuda = jt.has_cuda
+
     print(args)
     if args.version is None:
         print("must enter a version. e.g. 'python main.py --version 01'")
@@ -167,7 +168,9 @@ if __name__ == '__main__':
                 optimizer.zero_grad()
 
                 start_time = time.perf_counter()
+                # print("label[0] ", label[0])
                 target, target_length = converter.encode(label)
+                # print("target[0] ", target[0].data)
 
                 preds = model(img)
                 preds_length = jt.full((preds.size(1), ),
@@ -180,13 +183,14 @@ if __name__ == '__main__':
                 optimizer.step()
 
                 losses.append(loss.clone().item())
+                # print("  ep_i %d, loss %.4f" % (ep_i, loss.clone().item()))
 
                 step_time = (time.perf_counter() - start_time) / 1e3
                 log_time += step_time
 
                 if (ep_i + 1) % args.logging_steps == 0:
-                    print("  epoch %d - %d, cycle %d, loss %.2f, time %.2f s" %
-                          (epoch, ep_i, i, np.mean(losses), log_time))
+                    # print("  epoch %d - %d, cycle %d, loss %.2f, time %.2f s" %
+                    #       (epoch, ep_i, i, np.mean(losses), log_time))
                     tb_writer.add_scalar("train loss",
                                          np.mean(losses),
                                          global_step=i)
@@ -201,6 +205,8 @@ if __name__ == '__main__':
                         dataloader=dataloader_val,
                         converter=converter,
                         batch_size=args.batch_size)
+                    print("epoch %d - %d/28221, val loss %.4f, val accu %.4f" % 
+                          (epoch, ep_i, val_loss, accuracy))
                     tb_writer.add_scalar("val loss", val_loss, global_step=i)
                     tb_writer.add_scalar("accuracy", accuracy, global_step=i)
                     tb_writer.add_text("target", groundtrue[0], global_step=i)
@@ -213,6 +219,8 @@ if __name__ == '__main__':
 
                 i += 1
                 ep_i += 1
+                # print("i = %d" % i)
+                # print("")
 
             epoch_time = time.time() - epoch_start_time
             tb_writer.add_scalar("epoch time", epoch_time, global_step=epoch)

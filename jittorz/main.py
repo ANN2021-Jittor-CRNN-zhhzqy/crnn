@@ -20,7 +20,7 @@ parser.add_argument('--version',
 parser.add_argument('--num_epochs',
                     type=int,
                     default=15,
-                    help='Number of training epoch. Default: 10')
+                    help='Number of training epoch. Default: 15')
 parser.add_argument('--batch_size',
                     type=int,
                     default=256,
@@ -30,7 +30,7 @@ parser.add_argument('--learning_rate',
                     default=1e-3,
                     help='Learning rate during optimization. Default: 1e-3')
 parser.add_argument('--data_dir',
-                    default='../data/lmdb_train',
+                    default='../data/lmdb_train1',
                     type=str,
                     help='The path of the data directory')
 parser.add_argument('--val_dir',

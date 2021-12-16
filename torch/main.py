@@ -26,7 +26,7 @@ parser.add_argument('--num_epochs',
                     help='Number of training epoch. Default: 10')
 parser.add_argument('--batch_size',
                     type=int,
-                    default=128,
+                    default=256,
                     help='The number of batch_size.')
 parser.add_argument('--learning_rate',
                     type=float,
@@ -126,6 +126,7 @@ def fast_eval(model,
 if __name__ == '__main__':
     print(args)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print("device: ", device)
 
     config = "{}_{}".format(args.num_epochs, args.batch_size)
     args.ckpt_dir = os.path.join(args.ckpt_dir, config)
@@ -170,11 +171,11 @@ if __name__ == '__main__':
             for img, label in dataloader:
                 model.train()
                 start_time = time.perf_counter()
-                # print("label[0] ", label[0])
+                print("label[0] ", label[0])
 
                 model.zero_grad()
                 target, target_length = converter.encode(label)
-                # print("target[0] ", target[0].data)
+                print("target[0] ", target[0].data)
 
                 img.to(device)
                 target.to(device)
@@ -190,6 +191,9 @@ if __name__ == '__main__':
                 optimizer.step()
                 losses.append(loss.tolist())
                 loss.item()
+                print("i %d, loss %.4f" % (i, loss.tolist()))
+                print("")
+
                 step_time = (time.perf_counter() - start_time) / 1e3
                 log_time += step_time
 

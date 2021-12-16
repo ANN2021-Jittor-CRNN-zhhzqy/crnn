@@ -16,7 +16,7 @@ class strLabelConverter(object):
         self._ignore_case = ignore_case
         if self._ignore_case:
             alphabet = alphabet.lower()
-        self.alphabet = alphabet + '-'  # for `-1` index
+        self.alphabet = alphabet  # for `-1` index
 
         self.dict = {}
         for i, char in enumerate(alphabet):
@@ -38,7 +38,7 @@ class strLabelConverter(object):
             st = [self.dict[char.lower() if self._ignore_case else char] for char in s]
             st = jt.nn.pad(jt.array(st), (0, max_len - len(st)), "constant", 0)
             sts.append(st)
-        return jt.stack(sts), jt.array(length)
+        return jt.stack(sts).clone(), jt.array(length).clone()
         """
         length = [len(s) for s in texts]
         s = ''.join(texts)
