@@ -39,6 +39,23 @@ class strLabelConverter(object):
             st = jt.nn.pad(jt.array(st).clone(), (0, max_len - len(st)))
             sts.append(st)
         return jt.stack(sts), jt.array(length)
+        
+    def encode_s(self, texts):
+        """
+        Only Support Batch of str!
+
+        Args:
+            text (list of str): texts to convert.
+
+        """
+        sts = []
+        length = [len(s) for s in texts]
+        max_len = 512
+        for s in texts:
+            st = [self.dict[char.lower() if self._ignore_case else char] for char in s]
+            st = jt.nn.pad(jt.array(st).clone(), (0, max_len - len(st)))
+            sts.append(st)
+        return jt.stack(sts), jt.array(length)
 
     def decode(self, encoded_texts):
         """

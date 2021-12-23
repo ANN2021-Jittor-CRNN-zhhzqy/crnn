@@ -19,7 +19,7 @@ parser.add_argument('--version',
                     help='added to ckpt and log filename')
 parser.add_argument('--num_epochs',
                     type=int,
-                    default=15,
+                    default=12,
                     help='Number of training epoch. Default: 10')
 parser.add_argument('--batch_size',
                     type=int,
@@ -108,6 +108,7 @@ def fast_eval(model,
 
 if __name__ == '__main__':
     jt.flags.use_cuda = jt.has_cuda
+    jt.flags.lazy_execution = 0
 
     print(args)
     if args.version is None:
@@ -131,8 +132,8 @@ if __name__ == '__main__':
         model = CRNN(num_channels=1,
                      num_class=len(args.alphabet) + 1,
                      num_units=args.num_units)
-        model.apply(weights_init)
-
+        # model.apply(weights_init)
+        model.load("result/ep14_bs256_v1/e2_i1999")
         optimizer = Adadelta(model.parameters(), lr=args.learning_rate)
         # optimizer = nn.SGD(model.parameters(), lr=args.learning_rate)
         criterion = jt.CTCLoss(blank=0)
@@ -205,7 +206,7 @@ if __name__ == '__main__':
                         dataloader=dataloader_val,
                         converter=converter,
                         batch_size=args.batch_size)
-                    print("epoch %d - %d/28221, val loss %.4f, val accu %.4f" % 
+                    print("epoch %d - %d/28221, val loss %.4f, val accu %.4f" %
                           (epoch, ep_i, val_loss, accuracy))
                     tb_writer.add_scalar("val loss", val_loss, global_step=i)
                     tb_writer.add_scalar("accuracy", accuracy, global_step=i)

@@ -1,0 +1,8 @@
+build
+libtorch
+CMakeFiles
+CMakeCache.txt
+*.cmake
+*.zip
+demo
+Makefile

@@ -86,7 +86,7 @@ def main(outputPath, checkValid=True):
 
     root_path = "/root/synth/mnt/ramdisk/max/90kDICT32px/"
 
-    file = open("/root/synth/mnt/ramdisk/max/90kDICT32px/annotation_val.txt",
+    file = open("/root/synth/mnt/ramdisk/max/90kDICT32px/annotation_test.txt",
                 'r')
     line = file.readline()
     env = lmdb.open(outputPath, map_size=1099511627776)
@@ -129,4 +129,4 @@ def main(outputPath, checkValid=True):
 
 
 if __name__ == '__main__':
-    main("/root/project/data/lmdb_val1")
+    main("/root/project/data/lmdb_test")

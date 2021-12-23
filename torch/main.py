@@ -22,18 +22,18 @@ from tools.utlis import strLabelConverter
 parser = argparse.ArgumentParser()
 parser.add_argument('--num_epochs',
                     type=int,
-                    default=10,
+                    default=11,
                     help='Number of training epoch. Default: 10')
 parser.add_argument('--batch_size',
                     type=int,
-                    default=256,
+                    default=1,
                     help='The number of batch_size.')
 parser.add_argument('--learning_rate',
                     type=float,
                     default=1e-3,
                     help='Learning rate during optimization. Default: 1e-3')
 parser.add_argument('--data_dir',
-                    default='../data/lmdb_train',
+                    default='../data/lmdb_train1',
                     type=str,
                     help='The path of the data directory')
 parser.add_argument('--val_dir',
@@ -171,11 +171,11 @@ if __name__ == '__main__':
             for img, label in dataloader:
                 model.train()
                 start_time = time.perf_counter()
-                print("label[0] ", label[0])
+                # print("label[0] ", label[0])
 
                 model.zero_grad()
                 target, target_length = converter.encode(label)
-                print("target[0] ", target[0].data)
+                # print("target[0] ", target[0].data)
 
                 img.to(device)
                 target.to(device)
@@ -229,7 +229,7 @@ if __name__ == '__main__':
                     path = os.path.join(args.ckpt_dir,
                                         "crnn{}_{}".format(epoch, i))
                     torch.save(model.state_dict(), path)
-                    
+
             epoch_time = time.time() - epoch_start_time
             tb_writer.add_scalar("epoch time",
                                  epoch_start_time,

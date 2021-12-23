@@ -21,7 +21,6 @@ class encoderlayer(nn.Module):
         self.dropout1 = nn.Dropout(dropout)
         self.dropout2 = nn.Dropout(dropout)
         self.activation = activation
-
         self.self_attn = attention.MultiheadAttention(embed_dim=embed_dim,
                                                       num_heads=num_heads,
                                                       dropout=dropout,
@@ -157,7 +156,6 @@ class TransformerEncoder(nn.Module):
                              dropout=dropout))
         self.norm = norm
 
-
     def execute(self, src, mask=None, src_key_padding_mask=None):
         """Pass the input through the encoder layers in turn.
 
@@ -173,8 +171,8 @@ class TransformerEncoder(nn.Module):
 
         for mod in self.layers:
             output = mod(output,
-                        src_mask=mask,
-                        src_key_padding_mask=src_key_padding_mask)
+                         src_mask=mask,
+                         src_key_padding_mask=src_key_padding_mask)
 
         if self.norm is not None:
             output = self.norm(output)
@@ -284,7 +282,7 @@ class Transformer(nn.Module):
                 src_key_padding_mask=None,
                 tgt_key_padding_mask=None,
                 memory_key_padding_mask=None):
-        
+
         memory = self.encoder(src,
                               mask=src_mask,
                               src_key_padding_mask=src_key_padding_mask)

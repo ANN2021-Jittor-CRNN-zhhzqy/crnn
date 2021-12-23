@@ -8,7 +8,7 @@ import jittor.nn as nn
 
 from tensorboardX import SummaryWriter
 
-from model import CRNN, weights_init
+from modeltf import CRNN, weights_init
 from adadelta import Adadelta
 from dataset import lmdbDataset
 from utils import strLabelConverter
@@ -34,7 +34,7 @@ parser.add_argument('--data_dir',
                     type=str,
                     help='The path of the data directory')
 parser.add_argument('--val_dir',
-                    default='../data/lmdb_val',
+                    default='../data/lmdb_val1',
                     type=str,
                     help='The path of the data directory')
 parser.add_argument(
@@ -57,9 +57,9 @@ parser.add_argument('--num_units',
 parser.add_argument('--alphabet',
                     type=str,
                     default='0123456789abcdefghijklmnopqrstuvwxyz')
-parser.add_argument('--val_steps', type=int, default=2000)
-parser.add_argument('--logging_steps', type=int, default=1000)
-parser.add_argument('--saving_steps', type=int, default=2000)
+parser.add_argument('--val_steps', type=int, default=1)
+parser.add_argument('--logging_steps', type=int, default=10)
+parser.add_argument('--saving_steps', type=int, default=500)
 parser.add_argument('--ckpt_dir',
                     type=str,
                     default='./result',
@@ -108,6 +108,9 @@ def fast_eval(model,
 
 if __name__ == '__main__':
     jt.flags.use_cuda = jt.has_cuda
+    jt.flags.lazy_execution=0
+
+
     print(args)
     if args.version is None:
         print("must enter a version. e.g. 'python main.py --version 01'")
@@ -168,18 +171,19 @@ if __name__ == '__main__':
 
                 start_time = time.perf_counter()
                 target, target_length = converter.encode(label)
+                tgt,_=converter.encode_s(label)
 
-                preds = model(img)
+                preds = model.execute(x=img,target=tgt)
                 preds_length = jt.full((preds.size(1), ),
                                        val=preds.size(0),
                                        dtype=jt.int)
 
-                loss = criterion(preds, target, preds_length, target_length)
+                loss = criterion(preds, target, preds_length, target_length.clone())
 
                 optimizer.backward(loss)
                 optimizer.step()
 
-                losses.append(loss.clone().item())
+                losses.append(loss.item())
 
                 step_time = (time.perf_counter() - start_time) / 1e3
                 log_time += step_time
@@ -194,17 +198,17 @@ if __name__ == '__main__':
                     losses = []
                     log_time = 0
 
-                if (ep_i + 1) % args.val_steps == 0:
-                    val_loss, accuracy, result, groundtrue = fast_eval(
-                        model=model,
-                        criterion=criterion,
-                        dataloader=dataloader_val,
-                        converter=converter,
-                        batch_size=args.batch_size)
-                    tb_writer.add_scalar("val loss", val_loss, global_step=i)
-                    tb_writer.add_scalar("accuracy", accuracy, global_step=i)
-                    tb_writer.add_text("target", groundtrue[0], global_step=i)
-                    tb_writer.add_text("preds", result[0], global_step=i)
+                # if (ep_i + 1) % args.val_steps == 0:
+                #     val_loss, accuracy, result, groundtrue = fast_eval(
+                #         model=model,
+                #         criterion=criterion,
+                #         dataloader=dataloader_val,
+                #         converter=converter,
+                #         batch_size=args.batch_size)
+                #     tb_writer.add_scalar("val loss", val_loss, global_step=i)
+                #     tb_writer.add_scalar("accuracy", accuracy, global_step=i)
+                #     tb_writer.add_text("target", groundtrue[0], global_step=i)
+                #     tb_writer.add_text("preds", result[0], global_step=i)
 
                 if (ep_i + 1) % args.saving_steps == 0:
                     path = os.path.join(args.ckpt_dir,
