@@ -120,7 +120,7 @@ def main(outputPath, checkValid=True):
 
         # if (cnt == 10000):
         #     break
-        # line = file.readline()
+        line = file.readline()  # 为什么把这个注释掉？
 
     nSamples = cnt - 1
     cache['num-samples'] = str(nSamples).encode()

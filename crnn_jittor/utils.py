@@ -1,4 +1,5 @@
 import jittor as jt
+import Levenshtein
 
 
 class strLabelConverter(object):
@@ -69,3 +70,39 @@ class strLabelConverter(object):
                 last_char_i = char_i
             texts.append(''.join(char_list))
         return texts
+
+
+class BKNode(object):
+    def __init__(self, w):
+        self.w = w
+        self.children = {}
+
+    def insert(self, w):
+        dis = Levenshtein.distance(self.w, w)
+        if dis in self.children:
+            self.children[dis].insert(w)
+        else:
+            self.children[dis] = BKNode(w)
+    
+    def find(self, w, threshold, ret_list):
+        dis = Levenshtein.distance(self.w, w)
+        if dis <= threshold:
+            ret_list.append(self.w)
+        
+        for dis_c, c in self.children.items():
+            if dis - threshold <= dis_c <= dis + threshold:
+                c.find(w, threshold, ret_list)
+
+
+class BKTree(object):
+    def __init__(self, lex_dict):
+        root_w = lex_dict.pop(0)
+        self.root = BKNode(root_w)
+        for w in lex_dict:
+            self.root.insert(w)
+
+    def find(self, s, threshold):
+        ret_list = []
+        self.root.find(s, threshold, ret_list)
+        return ret_list
+
