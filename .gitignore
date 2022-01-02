@@ -1,4 +1,6 @@
 data/
+jittorz
+__pycache__
 *.pt
 *.png
 *.vscode
