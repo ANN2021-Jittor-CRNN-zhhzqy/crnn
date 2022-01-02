@@ -78,6 +78,7 @@ parser.add_argument('--ckpt_dir',
                     default='./result',
                     help='The path of the checkpoint directory')
 parser.add_argument('--log_dir', type=str, default='./run')
+parser.add_argument('--print', action='store_true', default=False)
 
 args = parser.parse_args()
 
@@ -320,7 +321,9 @@ if __name__ == '__main__':
             str_preds = converter.decode(encoded_texts)  # [str](256)
             
             if args.test_mode is None:
-                for str_pred, label in zip(str_preds, labels):
+                for str_pred, label, path_key in zip(str_preds, labels, paths):
+                    if args.print:
+                        print("filename: %s, label: %s, predict: %s" % (path_key, label, str_pred))
                     if str_pred == label.lower():
                         count += 1
             elif args.test_mode == "svt" or args.test_mode == "iiit5k50" or args.test_mode == "iiit5k1000" or args.test_mode == "hunspell":
@@ -350,6 +353,8 @@ if __name__ == '__main__':
                     #        print("label not in lex_dict['hunspell']")
                     #print("_str_pred", _str_pred, "str_pred: ", str_pred, ", label: ", label)
                     #print("")
+                    if args.print:
+                        print("filename: %s, label: %s, predict: %s" % (path_key, label, str_pred))
                     if str_pred == label.lower():
                         count += 1
                     test_num += 1
