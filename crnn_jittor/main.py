@@ -15,6 +15,9 @@ from dataset import lmdbDataset
 from dataset_test import lmdbTestDataset
 from utils import strLabelConverter, BKTree
 
+import torch
+from torchvision.utils import make_grid
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--version',
                     type=int,
@@ -297,6 +300,7 @@ if __name__ == '__main__':
         test_start_time = time.time()
         count = 0
         test_num = 0
+        img_list = []
         for imgs, labels, paths in dataloader_test:
             """
             * lmdb_iiit5k_test: 3000 / 256 = 11 + 1 steps
@@ -321,13 +325,20 @@ if __name__ == '__main__':
             str_preds = converter.decode(encoded_texts)  # [str](256)
             
             if args.test_mode is None:
-                for str_pred, label, path_key in zip(str_preds, labels, paths):
+                for str_pred, label, path_key, img in zip(str_preds, labels, paths, imgs):
                     if args.print:
                         print("filename: %s, label: %s, predict: %s" % (path_key, label, str_pred))
+                    if test_num < 16:
+                        # tb_writer.add_image("examples", make_grid(torch.from_numpy(img.numpy())), global_step=test_num)
+                        # print(img.shape)
+                        img_list.append(torch.from_numpy(img.numpy()))
+                        tb_writer.add_text("exapmle_label", label, global_step=test_num)
+                        tb_writer.add_text("example_pred", str_pred, global_step=test_num)
                     if str_pred == label.lower():
                         count += 1
+                    test_num += 1
             elif args.test_mode == "svt" or args.test_mode == "iiit5k50" or args.test_mode == "iiit5k1000" or args.test_mode == "hunspell":
-                for _str_pred, label, path_key, prob in zip(str_preds, labels, paths, preds):  # str, str, str, (24, 38)
+                for _str_pred, label, path_key, prob, img in zip(str_preds, labels, paths, preds, imgs):  # str, str, str, (24, 38)
                     str_pred = _str_pred
                     # print("str_pred: ", str_pred, ", label: ", label)
                     if args.test_mode == "hunspell":
@@ -355,6 +366,10 @@ if __name__ == '__main__':
                     #print("")
                     if args.print:
                         print("filename: %s, label: %s, predict: %s" % (path_key, label, str_pred))
+                    if test_num < 16:
+                        img_list.append(torch.from_numpy(img.numpy()))
+                        tb_writer.add_text("exapmle_label", label, global_step=test_num)
+                        tb_writer.add_text("example_pred", str_pred, global_step=test_num)
                     if str_pred == label.lower():
                         count += 1
                     test_num += 1
@@ -377,5 +392,10 @@ if __name__ == '__main__':
         tb_writer.add_scalar("test loss", test_loss)
         tb_writer.add_text("test pred", example_pred)
         tb_writer.add_text("test label", example_label)
+
+        #print(img_list)
+        torch_imgs = torch.stack(img_list)
+        #print(torch_imgs.shape)
+        tb_writer.add_image("examples2", make_grid(torch_imgs))
 
         print("Test Finish")
