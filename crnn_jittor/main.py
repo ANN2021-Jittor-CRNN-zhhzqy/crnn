@@ -29,8 +29,8 @@ parser.add_argument('--batch_size',
                     help='The number of batch_size.')
 parser.add_argument('--learning_rate',
                     type=float,
-                    default=1e-3,
-                    help='Learning rate during optimization. Default: 1e-3')
+                    default=1e-4,
+                    help='Learning rate during optimization. Default: 1e-4')
 parser.add_argument('--data_dir',
                     default='../data/lmdb_train',
                     type=str,
@@ -150,7 +150,7 @@ if __name__ == '__main__':
                      num_class=len(args.alphabet) + 1,
                      num_units=args.num_units)
         # model.apply(weights_init)
-        model.load("result/ep10_bs256_v38/e9_i27999")
+        model.load("result/ep10_bs256_v68/e9_i27999")
         optimizer = Adadelta(model.parameters(), lr=args.learning_rate)
         # optimizer = nn.SGD(model.parameters(), lr=args.learning_rate)
         criterion = jt.CTCLoss(blank=0)
@@ -251,7 +251,7 @@ if __name__ == '__main__':
         model = CRNN(num_channels=1,
                      num_class=len(args.alphabet) + 1,
                      num_units=args.num_units)
-        model.load("result/ep10_bs256_v38/e4_i5999")  # 这里修改 load 的模型
+        model.load("result/ep10_bs256_v68/e9_i27999")  # 这里修改 load 的模型
         criterion = jt.CTCLoss(blank=0)
         criterion_test = jt.CTCLoss(blank=0, reduction='none')
         converter = strLabelConverter(args.alphabet)
@@ -265,6 +265,7 @@ if __name__ == '__main__':
         tb_writer = SummaryWriter(args.log_dir)
 
         lex_dict = {}
+        bkTree = None
         if args.test_mode == "svt" or args.test_mode == "iiit5k50" or args.test_mode == "iiit5k1000" or args.test_mode == "hunspell":
             if args.test_mode == "svt":
                 lex_path = "../data/svt_lex.txt"
@@ -279,7 +280,9 @@ if __name__ == '__main__':
                 lines = f.read().split('\n')
 
             if args.test_mode == "hunspell":
-                lex_dict["hunspell"] = [w for w in lines if len(w) >= 3]
+                lex_dict["hunspell"] = [w.lower() for w in lines if len(w) >= 3]
+                bkTree = BKTree(lex_dict['hunspell'])
+                print("build bk tree!")
             else:
                 for line in lines:
                     name_list = line.split(' ')
@@ -292,6 +295,7 @@ if __name__ == '__main__':
         losses = []
         test_start_time = time.time()
         count = 0
+        test_num = 0
         for imgs, labels, paths in dataloader_test:
             """
             * lmdb_iiit5k_test: 3000 / 256 = 11 + 1 steps
@@ -320,14 +324,14 @@ if __name__ == '__main__':
                     if str_pred == label.lower():
                         count += 1
             elif args.test_mode == "svt" or args.test_mode == "iiit5k50" or args.test_mode == "iiit5k1000" or args.test_mode == "hunspell":
-                bkTree = None
-                if args.test_mode == "hunspell":
-                    bkTree = BKTree(lex_dict['hunspell'])
-                    print("build bk tree!")
                 for _str_pred, label, path_key, prob in zip(str_preds, labels, paths, preds):  # str, str, str, (24, 38)
                     str_pred = _str_pred
+                    # print("str_pred: ", str_pred, ", label: ", label)
                     if args.test_mode == "hunspell":
-                        lex = bkTree.find(str_pred, args.threshold)
+                        if (label not in lex_dict['hunspell']):
+                            lex = []
+                        else:
+                            lex = bkTree.find(str_pred, args.threshold)
                         # print("bk find for %s, len(lex): %d" % (str_pred, len(lex)))
                     else:
                         lex = [w for w in lex_dict[path_key] if distance(w, _str_pred) <= args.threshold]
@@ -340,8 +344,15 @@ if __name__ == '__main__':
                                               len_lex)
                         str_pred = lex[loss.argmin(dim=-1)[0].item()]
                         #print(str_pred)
+                    #if (label not in lex):
+                    #    print("label not in lex, len(lex) =", len(lex))
+                    #    if (label not in lex_dict['hunspell']):
+                    #        print("label not in lex_dict['hunspell']")
+                    #print("_str_pred", _str_pred, "str_pred: ", str_pred, ", label: ", label)
+                    #print("")
                     if str_pred == label.lower():
                         count += 1
+                    test_num += 1
 
         test_time = time.time() - test_start_time
         test_accu = count / len(dataloader_test)
